@@ -26,10 +26,30 @@ const upload = multer({ storage: storage });
 // @access  Public
 router.get('/', async (req, res) => {
     try {
-        const { type, location, minPrice, maxPrice, featured } = req.query;
+        const { type, location, minPrice, maxPrice, featured, active } = req.query;
 
         // Construir filtros
-        const filters = { active: true };
+        const filters = {};
+
+        // Filtro de ativo (se não vier na query, traz só os ativos por padrão, 
+        // mas o painel manda active=false/true, então respeitamos)
+        if (active !== undefined) {
+             filters.active = active === 'true';
+        } else {
+             // Se for acesso público comum, pega só ativos. 
+             // Se for admin listando tudo, a lógica pode variar, 
+             // mas aqui garantimos que não quebra a home.
+             filters.active = true; 
+        }
+
+        // Se o painel pedir "todos" (active não definido ou explícito), precisamos ajustar
+        // O painel geralmente manda ?active=... ou busca tudo. 
+        // Vamos simplificar: Se a query active vier, usa ela. Se não, active=true.
+        if (req.query.hasOwnProperty('active') === false) {
+             filters.active = true;
+        } else if (active === 'all') {
+             delete filters.active; // Remove o filtro para trazer tudo
+        }
 
         if (type) filters.type = type;
         if (location) filters.location = new RegExp(location, 'i');
@@ -40,9 +60,19 @@ router.get('/', async (req, res) => {
         }
         if (featured === 'true') filters.featured = true;
 
-        const properties = await Property.find(filters)
-            .populate('createdBy', 'name email')
+        // BUSCA NO BANCO
+        let properties = await Property.find(filters)
+            .populate('createdBy', 'name email role') // Busca os dados do usuário
             .sort({ featured: -1, createdAt: -1 });
+
+        // --- O TRUQUE PARA O PAINEL FUNCIONAR ---
+        // Convertemos para objeto e criamos o alias 'owner' 
+        // apontando para 'createdBy'
+        properties = properties.map(doc => {
+            const p = doc.toObject();
+            p.owner = p.createdBy; // Aqui a mágica acontece!
+            return p;
+        });
 
         res.json({
             success: true,
@@ -63,10 +93,10 @@ router.get('/', async (req, res) => {
 // @access  Public
 router.get('/featured', async (req, res) => {
     try {
-        const properties = await Property.find({ active: true })
+        const properties = await Property.find({ active: true, featured: true })
             .populate('createdBy', 'name')
             .sort({ createdAt: -1 })
-            .limit(6);
+            .limit(10); // Aumentei pra 10 pro carrossel ficar bonito
 
         res.json({
             success: true,
@@ -122,7 +152,6 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             area, bedrooms, bathrooms, garages, featured
         } = req.body;
 
-        // Validar campos obrigatórios
         if (!title || !description || !type || !price || !location || !area || !bedrooms || !bathrooms || !garages) {
             return res.status(400).json({
                 success: false,
@@ -130,7 +159,6 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             });
         }
 
-        // Validar imagens
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -138,10 +166,8 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             });
         }
 
-        // Paths das imagens (AGORA PEGA O LINK DA NUVEM)
         const images = req.files.map(file => file.path);
 
-        // Criar imóvel
         const property = await Property.create({
             title,
             description,
@@ -155,7 +181,7 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             images,
             featured: featured === 'true' || featured === true,
             active: true,
-            createdBy: req.user._id
+            createdBy: req.user._id // Salva como createdBy
         });
 
         res.status(201).json({
@@ -187,7 +213,6 @@ router.put('/:id', [protect, brokerOrAdmin, upload.array('images', 10)], async (
             });
         }
 
-        // Verificar permissão (admin pode editar tudo, corretor só seus imóveis)
         if (req.user.role !== 'admin' && property.createdBy.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
@@ -200,7 +225,6 @@ router.put('/:id', [protect, brokerOrAdmin, upload.array('images', 10)], async (
             area, bedrooms, bathrooms, garages, featured, active
         } = req.body;
 
-        // Atualizar campos
         if (title) property.title = title;
         if (description) property.description = description;
         if (type) property.type = type;
@@ -213,7 +237,6 @@ router.put('/:id', [protect, brokerOrAdmin, upload.array('images', 10)], async (
         if (typeof featured !== 'undefined') property.featured = featured === 'true' || featured === true;
         if (typeof active !== 'undefined') property.active = active === 'true' || active === true;
 
-        // Atualizar imagens se houver (AGORA PEGA O LINK DA NUVEM)
         if (req.files && req.files.length > 0) {
             const newImages = req.files.map(file => file.path);
             property.images = newImages;
@@ -250,7 +273,6 @@ router.delete('/:id', [protect, brokerOrAdmin], async (req, res) => {
             });
         }
 
-        // Verificar permissão
         if (req.user.role !== 'admin' && property.createdBy.toString() !== req.user._id.toString()) {
             return res.status(403).json({
                 success: false,
