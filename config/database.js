@@ -9,23 +9,38 @@ const connectDB = async () => {
 
         console.log(`✅ MongoDB Conectado: ${conn.connection.host}`);
         
-        // Criar usuário admin padrão se não existir
-        const User = require('../models/User');
-        const adminExists = await User.findOne({ username: 'admin' });
-        
-        if (!adminExists) {
-            await User.create({
-                username: 'admin',
-                password: 'admin123', // Será hashado automaticamente
-                email: 'admin@visionimoveis.com.br',
-                name: 'Administrador',
-                role: 'admin'
+        // --- BLOCAGEM DE CRIAÇÃO DE ADMIN (CORRIGIDA) ---
+        try {
+            const User = require('../models/User');
+            
+            // Verifica se existe alguém com esse username OU esse email
+            const adminExists = await User.findOne({ 
+                $or: [
+                    { username: 'admin' }, 
+                    { email: 'admin@visionimoveis.com.br' }
+                ]
             });
-            console.log('✅ Usuário admin criado');
+            
+            if (!adminExists) {
+                await User.create({
+                    username: 'admin',
+                    password: 'admin123',
+                    email: 'admin@visionimoveis.com.br',
+                    name: 'Administrador',
+                    role: 'admin'
+                });
+                console.log('✅ Usuário admin criado');
+            } else {
+                console.log('ℹ️ Admin já existe no banco. Iniciando servidor normalmente.');
+            }
+        } catch (adminError) {
+            // Se der erro aqui, a gente só avisa, NÃO derruba o servidor
+            console.error(`⚠️ Aviso: Erro ao verificar admin (Ignorado): ${adminError.message}`);
         }
-        
+        // ------------------------------------------------
+
     } catch (error) {
-        console.error(`❌ Erro ao conectar MongoDB: ${error.message}`);
+        console.error(`❌ Erro FATAL ao conectar MongoDB: ${error.message}`);
         process.exit(1);
     }
 };
