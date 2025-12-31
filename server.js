@@ -1,3 +1,4 @@
+const multer = require('multer');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -56,8 +57,8 @@ app.use((req, res) => {
 // Tratamento de erros globais
 app.use((err, req, res, next) => {
     console.error('Erro:', err);
-
-    if (err instanceof multer.MulterError) {
+    
+if (err instanceof multer.MulterError) {
         return res.status(400).json({
             success: false,
             message: 'Erro no upload: ' + err.message
@@ -81,7 +82,6 @@ app.listen(PORT, () => {
 ║                                                        ║
 ║  Servidor rodando na porta: ${PORT}                      ║
 ║  Ambiente: ${process.env.NODE_ENV || 'development'}                      ║
-║  URL: http://localhost:${PORT}                           ║
 ║                                                        ║
 ║  Rotas disponíveis:                                   ║
 ║  • GET  /api                  - Info da API           ║
