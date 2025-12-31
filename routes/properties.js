@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
 // @access  Public
 router.get('/featured', async (req, res) => {
     try {
-        const properties = await Property.find({ featured: true, active: true })
+        const properties = await Property.find({ active: true })
             .populate('createdBy', 'name')
             .sort({ createdAt: -1 })
             .limit(6);
