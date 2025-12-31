@@ -6,32 +6,20 @@ const { protect, brokerOrAdmin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
-// Configurar upload de imagens
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+// --- IMPORTAÇÕES DO CLOUDINARY ---
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Configurar upload para o Cloudinary
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'vision_imoveis',
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
     },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'property-' + uniqueSuffix + path.extname(file.originalname));
-    }
 });
 
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-    fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp/;
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = filetypes.test(file.mimetype);
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        } else {
-            cb(new Error('Apenas imagens (JPG, PNG, WEBP) são permitidas'));
-        }
-    }
-});
+const upload = multer({ storage: storage });
 
 // @route   GET /api/properties
 // @desc    Listar todos os imóveis (público)
@@ -150,8 +138,8 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             });
         }
 
-        // Paths das imagens
-        const images = req.files.map(file => `/uploads/${file.filename}`);
+        // Paths das imagens (AGORA PEGA O LINK DA NUVEM)
+        const images = req.files.map(file => file.path);
 
         // Criar imóvel
         const property = await Property.create({
@@ -224,9 +212,9 @@ router.put('/:id', [protect, brokerOrAdmin, upload.array('images', 10)], async (
         if (typeof featured !== 'undefined') property.featured = featured === 'true' || featured === true;
         if (typeof active !== 'undefined') property.active = active === 'true' || active === true;
 
-        // Atualizar imagens se houver
+        // Atualizar imagens se houver (AGORA PEGA O LINK DA NUVEM)
         if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => `/uploads/${file.filename}`);
+            const newImages = req.files.map(file => file.path);
             property.images = newImages;
         }
 

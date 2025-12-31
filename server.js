@@ -1,5 +1,17 @@
 const multer = require('multer');
 require('dotenv').config();
+// --- CLOUDINARY CONFIGURAÇÃO ---
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Configura as chaves do Cloudinary aqui no start
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+// -------------------------------
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -8,10 +20,9 @@ const fs = require('fs');
 
 // Inicializar express
 const app = express();
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
-    
+
+// (Removi a parte de criar pasta 'uploads' porque na nuvem não precisa)
+
 // Conectar ao banco de dados
 connectDB();
 
@@ -23,13 +34,13 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir arquivos estáticos (uploads)
+// Servir arquivos estáticos (uploads) - Mantemos por segurança pra fotos antigas
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rotas da API
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
-app.use('/api/properties', require('./routes/properties'));
+app.use('/api/properties', require('./routes/properties')); // <--- O ULPOAD TÁ AQUI DENTRO
 app.use('/api/appointments', require('./routes/appointments'));
 
 // Rota de teste
@@ -62,7 +73,7 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
     console.error('Erro:', err);
     
-if (err instanceof multer.MulterError) {
+    if (err instanceof multer.MulterError) {
         return res.status(400).json({
             success: false,
             message: 'Erro no upload: ' + err.message
@@ -84,7 +95,7 @@ app.listen(PORT, () => {
 ║                                                        ║
 ║          🏢 VISION IMÓVEIS - API SERVER              ║
 ║                                                        ║
-║  Servidor rodando na porta: ${PORT}                      ║
+║  Servidor rodando na porta: ${PORT}                       ║
 ║  Ambiente: ${process.env.NODE_ENV || 'development'}                      ║
 ║                                                        ║
 ║  Rotas disponíveis:                                   ║
