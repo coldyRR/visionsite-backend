@@ -154,6 +154,7 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             garages: Number(garages),
             images,
             featured: featured === 'true' || featured === true,
+            active: true,
             createdBy: req.user._id
         });
 
