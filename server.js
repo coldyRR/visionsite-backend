@@ -27,8 +27,13 @@ const app = express();
 connectDB();
 
 // Middlewares
+// Configuração do CORS (Lista VIP: Localhost + Vercel)
 app.use(cors({
-    origin: 'https://visionsite-frontend.vercel.app',
+    origin: [
+        'http://127.0.0.1:5500',       // Live Server Local
+        'http://localhost:5500',       // Live Server Local (alternativo)
+        'https://visionsite-frontend.vercel.app' // Seu Site Oficial
+    ],
     credentials: true
 }));
 app.use(express.json());
