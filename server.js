@@ -13,7 +13,7 @@ connectDB();
 
 // Middlewares
 app.use(cors({
-    origin: origin: 'https://visionsite-frontend.vercel.app',,
+    origin: 'https://visionsite-frontend.vercel.app',
     credentials: true
 }));
 app.use(express.json());
