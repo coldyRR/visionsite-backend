@@ -4,10 +4,14 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/database');
+const fs = require('fs');
 
 // Inicializar express
 const app = express();
-
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir);
+    
 // Conectar ao banco de dados
 connectDB();
 
