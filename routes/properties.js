@@ -145,7 +145,7 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/properties
 // @desc    Criar novo imóvel
 // @access  Private (Corretor ou Admin)
-router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (req, res) => {
+router.post('/', [protect, brokerOrAdmin, upload.fields([{ name: 'images', maxCount: 10 }])], async (req, res) => {
     try {
         const {
             title, description, type, price, location,
@@ -184,7 +184,7 @@ if (missingFields.length > 0) {
             });
         }
 
-        const images = req.files.map(file => file.path);
+        const images = req.files.images.map(file => file.path);
 
         const property = await Property.create({
             title,
@@ -220,7 +220,7 @@ if (missingFields.length > 0) {
 // @route   PUT /api/properties/:id
 // @desc    Atualizar imóvel
 // @access  Private (Corretor ou Admin)
-router.put('/:id', [protect, brokerOrAdmin, upload.array('images', 10)], async (req, res) => {
+router.put('/:id', [protect, brokerOrAdmin, upload.fields([{ name: 'images', maxCount: 10 }])], async (req, res) => {
     try {
         const property = await Property.findById(req.params.id);
 
@@ -255,8 +255,8 @@ router.put('/:id', [protect, brokerOrAdmin, upload.array('images', 10)], async (
         if (typeof featured !== 'undefined') property.featured = featured === 'true' || featured === true;
         if (typeof active !== 'undefined') property.active = active === 'true' || active === true;
 
-        if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => file.path);
+       if (req.files && req.files.images && req.files.images.length > 0) {
+    const newImages = req.files.images.map(file => file.path);
             property.images = newImages;
         }
 
