@@ -152,12 +152,30 @@ router.post('/', [protect, brokerOrAdmin, upload.array('images', 10)], async (re
             area, bedrooms, bathrooms, garages, featured
         } = req.body;
 
-        if (!title || !description || !type || !price || !location || !area || !bedrooms || !bathrooms || !garages) {
-            return res.status(400).json({
-                success: false,
-                message: 'Todos os campos obrigatórios devem ser preenchidos'
-            });
-        }
+ const requiredFields = {
+    title,
+    description,
+    type,
+    price,
+    location,
+    area,
+    bedrooms,
+    bathrooms,
+    garages
+};
+
+const missingFields = Object.entries(requiredFields)
+    .filter(([key, value]) => !value || value === '' || value === 'undefined')
+    .map(([key]) => key);
+
+if (missingFields.length > 0) {
+    console.log('❌ Campos faltando:', missingFields);
+    console.log('📋 Dados recebidos:', req.body);
+    return res.status(400).json({
+        success: false,
+        message: `Campos obrigatórios faltando: ${missingFields.join(', ')}`
+    });
+}
 
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({
